@@ -1,0 +1,122 @@
+\documentclass{article}
+\usepackage[utf8]{inputenc}
+
+\usepackage{amssymb,amsmath,amsfonts,longtable,amsthm,
+booktabs, comment,array, ifpdf, tabularx,url,color,array,colortbl,hyperref,graphicx, physics,siunitx}
+\usepackage[lambda,advantage,adversary, landau, probability, notions, logic, ff, mm, events, complexity, oracles, asymptotics, keys, primitives, operators, sets]{cryptocode}
+\usepackage[hmargin=3cm,vmargin=3cm]{geometry}
+
+
+\newcommand{\dmitry}[1]{ {\color{cyan}{ Dmitry: #1}} }
+\newcommand{\pratyush}[1]{ {\color{blue}{ Pratyush: #1}} }
+\newcommand{\mary}[1]{ {\color{magenta}{ Mary:  #1}} }
+\newtheorem{definition}{Definition}
+\newtheorem{lemma}{Lemma}
+\newtheorem{corollary}{Corollary}
+\newtheorem{theorem}{Theorem}
+\newtheorem{proposition}{Proposition}
+\newtheorem{remark}{Remark}
+\newtheorem{assumption}{Assumption}
+
+\newcommand{\Gen}{{\mathsf{Gen}}}
+\newcommand{\Eval}{{\mathsf{Eval}}}
+\newcommand{\Verify}{{\mathsf{Verify}}}
+\newcommand{\pubparam}{{\mathsf{pp}}}
+\newcommand{\id}{{\mathsf{id}}}
+\newcommand{\diffparam}{\Delta}
+\newcommand{\timestamp}{t}
+\newcommand{\domain}{{\mathcal{X}}}
+\newcommand{\range}{{\mathcal{Y}}}
+\newcommand{\resource}{{\mathcal{R}}}
+\newcommand{\usample}{\xleftarrow{\$}}
+
+\usepackage[normalem]{ulem}
+\usepackage[capitalise]{cleveref}
+\hypersetup{
+    colorlinks=true,
+    linkcolor=blue,
+    filecolor=magenta,      
+    urlcolor=blue,
+    pdfpagemode=FullScreen,
+}
+
+
+\title{Privacy Analysis of Whisk}
+\author{ Dmitry Khovratovich}
+
+
+\begin{document}
+
+\maketitle
+
+\section{Privacy analysis}
+
+
+Here we prove bounds on the censorship costs. First we outline the adversarial strategy that we presume optimal:
+\begin{itemize}
+    \item Adversary knows the stirs of fraction $\beta$ proposers.
+    \item There are additionally $\gamma$ proposers that go offline every day, and they are known to the adversary.
+    \item During the day, the adversary kills all 0-touchers as they are the cheapest.
+    \item He orders the remaining $(1-\beta-\gamma)$ trackers by the anonymity set size. 
+    \item Adversary shuts 1-touchers starting from the least anonymous ones.
+\end{itemize}
+
+\begin{lemma}
+Let fraction $\alpha$ of proposers be honest and alive. Then the total number of 0-touchers before final filtering is at most $$
+W(\alpha) =\frac{N+20\sqrt{N}}{\alpha K}
+$$
+\end{lemma}
+\begin{proof} Let us find how many trackers can evade the fraction $\alpha$ of stirs and thus become 0-touchers.
+
+Consider any $W>K$ trackers and a single stir. The probability for all the trackers to miss the stir is $p=(1-\frac{K}{N})^W\approx e^{-\frac{WK}{N}}$. Consider  stirs $\mathcal{S}_j=\{S[1,j],S[2,j],\ldots,S[s,j]\}$ i.e. those  that are $j$-th in their round. The number $\nu_j$ of stirs in $S$ not touching any of those $W$ trackers is a random variable, which is the sum of $s$ independent Bernoulli variables with mean $p$, and so has Binomial distribution with parameters $(s,p)$. Note that random variables $\nu_j$  have negative covariance, so the total number $\nu$ of stirs not touching any of $W$ trackers  can be upper bounded by the variable with distribution $Bin(N/K\cdot s= N/2,p)$. The latter distribution can be approximated by normal one with parameters $(\mu=Np/2,\sigma^2=Np(1-p)/2)$.  With probability $e^{-80}$ we have that  the value of $\nu$ is at most $$
+X(W)=\mu+12\sigma = Ne^{-\frac{WK}{N}}/2+12e^{-\frac{WK}{2N}}\sqrt{N/2}\approx \frac{N^2/2+10N\sqrt{N}}{WK}
+$$. We thus assume that at most $2^{-128}$ such sets of $W$ trackers miss more than $X$ stirs, and they would be infeasible to find. Thus the total fraction of stirs that can be evaded is $X/(N/2) = \frac{N+20\sqrt{N}}{WK}$, and so is  the maximum fraction of honest proposers that miss $W$ trackers.
+\end{proof}
+For $N = K^2 = 2^{16}$ we have $W(
+\alpha) = \frac{148}{\alpha}$.
+
+Now note the following
+\begin{itemize}
+    \item The anonymity set of each tracker increases with each honest stir it undergoes. 
+    \item Denote the fraction of 1-touchers after $r$ rounds by $F_1(r)$. Assuming uniform distribution of honest and online proposers over rounds, we have
+    $$
+    F_1(r)\approx 1-(1-\alpha)^r.
+    $$
+    This approximation is good enough for the anonymity set estimate.
+    \item Thanks to the uniformity of dispersion, we have each stir of round $r+1$ taking the same fraction of 1- and 0-touchers. Therefore out of $(1-\beta)K$ benign trackers we have $F_1(r)(1-\beta)K$ 1-touchers each with anonymity set at least $(1-\beta)K$, and the anonymity set of 1-touchers last touched at round $r+1$ is at least
+    $$
+    A_1(r+1) = (1-(1-\alpha)^r)(1-\beta)^2K^2 
+    $$
+\end{itemize}
+
+
+\begin{lemma} Suppose that the attacker shuts in day 2 down all nodes that were last touched in round $r$ or earlier of day 1. Then the cost is
+\begin{equation}
+   C(r)\geq \sum_{k=1}^r A_1(k)(F_1(k)-F_1(k-1))N \approx\sum_{k=1}^r (1-(\beta+\gamma+\delta)^{k-1})((1-\alpha)^{k-1}-(1-\alpha)^k)(1-\beta)^2K^2N.
+\end{equation}
+
+\end{lemma}
+
+\begin{theorem} Let the adversary
+\begin{itemize}
+    \item control $\beta N$ proposers in period $i$ (i.e. she knows the shuffles of those).
+    \item be able to shut down arbitrary $\delta N$ proposers in period $i$. 
+\end{itemize} 
+Let the fraction $\gamma$ of honest proposers of each day go offline. 
+Then the fraction of honest proposers of each day is $\alpha = 1- \beta-\gamma-\delta$ and the cost of the attack is $C(r_0)$
+ where $$
+r_0= \log_{1-\alpha}(1-\delta + \frac{W(\alpha)}{2N})
+$$
+
+\end{theorem}
+\begin{proof} In day 1 the fraction of honest and alive proposers who stir is $\alpha = 1- \beta-\gamma-\delta$. By Lemma the maximum number of trackers that become 0-touchers is $W(\alpha)$, of which 1/2 goes to Day 2. Therefore, out of $\delta N$ attacked trackers in Day 2, at least $\delta N - W(\alpha)/2$ are 1-touchers. The attacker then shuts down the 1-touchers that were touched at round $r_0$ at latest such that
+$$
+F_1(r_0)\geq \delta - \frac{W(\alpha)}{2N}
+$$
+which is equivalent to $$
+r_0\geq \log_{1-\alpha}(1-\delta + \frac{W(\alpha)}{2N})
+$$
+The cost is then $C(r_0)$.
+\end{proof}
+
+\end{document}
