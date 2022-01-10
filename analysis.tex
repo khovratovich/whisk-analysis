@@ -8,8 +8,6 @@ booktabs, comment,array, ifpdf, tabularx,url,color,array,colortbl,hyperref,graph
 
 
 \newcommand{\dmitry}[1]{ {\color{cyan}{ Dmitry: #1}} }
-\newcommand{\pratyush}[1]{ {\color{blue}{ Pratyush: #1}} }
-\newcommand{\mary}[1]{ {\color{magenta}{ Mary:  #1}} }
 \newtheorem{definition}{Definition}
 \newtheorem{lemma}{Lemma}
 \newtheorem{corollary}{Corollary}
@@ -49,7 +47,47 @@ booktabs, comment,array, ifpdf, tabularx,url,color,array,colortbl,hyperref,graph
 
 \maketitle
 
+\section{Notation}
+\begin{itemize}
+    \item $N$ is the number of trackers;
+    \item $K$ is the stir size;
+    \item $s$ is the number of rounds (with $N/K$ stirs in each).
+\end{itemize}
+
+\section{Feistel stir selection rule}
+
+We represent trackers as a $K\times K$ matrix $M$. Then define $F(x,y)$ as
+$$
+F(x,y) = (y, x+y^3 \bmod{K}).
+$$
+
+Finally, we  define  that $i$-th proposer of $r$-th round selects for stirring the $i$-th row of matrix $F^k(M)$.
+
+We say that the tracker selection rule is \emph{uniform} if all trackers of a single stir will be processed by distinct proposers in the next and in the after-next rounds.
+
+
+\begin{proposition}
+The Feistel rule is uniform for $K=128$.
+\end{proposition}
+\begin{proof}
+The proof is easy: for $y_1\neq y_2$ we have
+\begin{align*}
+F(x,y_1) &= (y_1,x+y_1^3);& F^2(x,y_1) &= (x+y_1^3,y_1+(x+y_1^3)^3);\\ F(x,y_2) &= (y_2,x+y_2^3);& F^2(x,y_2) &= (x+y_2^3,y_2+(x+y_2^3)^3)
+\end{align*}
+where  $x+y_1^3\neq x+y_2^3$ as $y\mapsto y^3$ is bijective modulo 128.
+\end{proof}
+
+The uniformity of the Feistel rule implies that 1- and 0-touchers of each round are uniformly spreaded to stirs of the next rounds, which can be formulated as follows.
+
+\begin{proposition}\label{prop:f2}
+Let $\mathcal{S}$ be any subset of  stirs with a uniform rule such that in round $r$ fraction $\alpha_r$ of stirs are in $\mathcal{S}$. Then the fraction of 1-touchers after round $k$ is $$
+F_1(k)=\prod_{r\leq k} (1-\alpha_r).
+$$
+\end{proposition}
+
 \section{Privacy analysis}
+
+
 
 
 Here we prove bounds on the censorship costs. First we outline the adversarial strategy that we presume optimal:
@@ -61,14 +99,18 @@ Here we prove bounds on the censorship costs. First we outline the adversarial s
     \item Adversary shuts 1-touchers starting from the least anonymous ones.
 \end{itemize}
 
-\begin{lemma}
+Now we utilize the property of the Feistel rule.
+
+
+\begin{proposition}
 Let fraction $\alpha$ of proposers be honest and alive. Then the total number of 0-touchers before final filtering is at most $$
 W(\alpha) =\frac{N+20\sqrt{N}}{\alpha K}
 $$
-\end{lemma}
+
+\end{proposition}
 \begin{proof} Let us find how many trackers can evade the fraction $\alpha$ of stirs and thus become 0-touchers.
 
-Consider any $W>K$ trackers and a single stir. The probability for all the trackers to miss the stir is $p=(1-\frac{K}{N})^W\approx e^{-\frac{WK}{N}}$. Consider  stirs $\mathcal{S}_j=\{S[1,j],S[2,j],\ldots,S[s,j]\}$ i.e. those  that are $j$-th in their round. The number $\nu_j$ of stirs in $S$ not touching any of those $W$ trackers is a random variable, which is the sum of $s$ independent Bernoulli variables with mean $p$, and so has Binomial distribution with parameters $(s,p)$. Note that random variables $\nu_j$  have negative covariance, so the total number $\nu$ of stirs not touching any of $W$ trackers  can be upper bounded by the variable with distribution $Bin(N/K\cdot s= N/2,p)$. The latter distribution can be approximated by normal one with parameters $(\mu=Np/2,\sigma^2=Np(1-p)/2)$.  With probability $e^{-80}$ we have that  the value of $\nu$ is at most $$
+For some $W$ bigger than $K$ let us select randomly $W$ trackers  and a single stir. The probability for all the trackers to miss the stir is $p=(1-\frac{K}{N})^W\approx e^{-\frac{WK}{N}}$. Consider  stirs $\mathcal{S}_j=\{S[1,j],S[2,j],\ldots,S[s,j]\}$ i.e. those  that are $j$-th in their round. The number $\nu_j$ of stirs in $S$ not touching any of those $W$ trackers is a random variable, which is the sum of $s$ independent Bernoulli variables with mean $p$, and so has Binomial distribution with parameters $(s,p)$. Note that random variables $\nu_j$  have negative covariance, so the total number $\nu$ of stirs not touching any of $W$ trackers  can be upper bounded by the variable with distribution $Bin(N/K\cdot s= N/2,p)$. The latter distribution can be approximated by normal one with parameters $(\mu=Np/2,\sigma^2=Np(1-p)/2)$.  With probability $e^{-80}$ we have that  the value of $\nu$ is at most $$
 X(W)=\mu+12\sigma = Ne^{-\frac{WK}{N}}/2+12e^{-\frac{WK}{2N}}\sqrt{N/2}\approx \frac{N^2/2+10N\sqrt{N}}{WK}
 $$. We thus assume that at most $2^{-128}$ such sets of $W$ trackers miss more than $X$ stirs, and they would be infeasible to find. Thus the total fraction of stirs that can be evaded is $X/(N/2) = \frac{N+20\sqrt{N}}{WK}$, and so is  the maximum fraction of honest proposers that miss $W$ trackers.
 \end{proof}
@@ -78,7 +120,7 @@ For $N = K^2 = 2^{16}$ we have $W(
 Now note the following
 \begin{itemize}
     \item The anonymity set of each tracker increases with each honest stir it undergoes. 
-    \item Denote the fraction of 1-touchers after $r$ rounds by $F_1(r)$. Assuming uniform distribution of honest and online proposers over rounds, we have
+    \item Denote the fraction of 1-touchers after $r$ rounds by $F_1(r)$. Since honest and online proposers are uniformly distributed over rounds thanks to the final filtering, and as the Feistel rule is uniform (see \cref{prop:f2}), we have
     $$
     F_1(r)\approx 1-(1-\alpha)^r.
     $$
@@ -87,15 +129,18 @@ Now note the following
     $$
     A_1(r+1) = (1-(1-\alpha)^r)(1-\beta)^2K^2 
     $$
+    \item For 1-toucher to be last touched in round $r$, it must undergo no honest stirs after that, which happens with probability $(1-\alpha)^{s-r}$. Thus the fraction of trackers last touched in round $r$ is
+    $F_2(r)=\alpha(1-\alpha)^{s-r}$.
 \end{itemize}
 
 
-\begin{lemma} Suppose that the attacker shuts in day 2 down all nodes that were last touched in round $r$ or earlier of day 1. Then the cost is
+\begin{proposition}
+Suppose that the attacker shuts in day 2 down all nodes that were last touched in round $r$ or earlier of day 1. Then the cost is
 \begin{equation}
-   C(r)\geq \sum_{k=1}^r A_1(k)(F_1(k)-F_1(k-1))N \approx\sum_{k=1}^r (1-(\beta+\gamma+\delta)^{k-1})((1-\alpha)^{k-1}-(1-\alpha)^k)(1-\beta)^2K^2N.
+   C(r)\geq \sum_{k=1}^r A_1(k)F_2(k)N =\sum_{k=1}^r (1-(1-\alpha)^{k-1})\alpha(1-\alpha)^{s-k}(1-\beta)^2K^2N.
 \end{equation}
 
-\end{lemma}
+\end{proposition}
 
 \begin{theorem} Let the adversary
 \begin{itemize}
@@ -111,11 +156,15 @@ $$
 \end{theorem}
 \begin{proof} In day 1 the fraction of honest and alive proposers who stir is $\alpha = 1- \beta-\gamma-\delta$. By Lemma the maximum number of trackers that become 0-touchers is $W(\alpha)$, of which 1/2 goes to Day 2. Therefore, out of $\delta N$ attacked trackers in Day 2, at least $\delta N - W(\alpha)/2$ are 1-touchers. The attacker then shuts down the 1-touchers that were touched at round $r_0$ at latest such that
 $$
-F_1(r_0)\geq \delta - \frac{W(\alpha)}{2N}
+\sum_{k\leq r_0}F_2(k)\geq \delta - \frac{W(\alpha)}{2N}
 $$
-which is equivalent to $$
-r_0\geq \log_{1-\alpha}(1-\delta + \frac{W(\alpha)}{2N})
-$$
+which is equivalent to \begin{align}
+\sum_{k\leq r_0}F_2(k)\geq \delta - \frac{W(\alpha)}{2N}\;\Leftrightarrow\\
+\sum_{k\leq r_0}\alpha(1-\alpha)^{s-k}\geq \delta - \frac{W(\alpha)}{2N}\;\Leftrightarrow\\
+\alpha(1-\alpha)^{s-r_0}\frac{(1-\alpha)^{r_0}-1}{-\alpha}\geq \delta - \frac{W(\alpha)}{2N}\;\Leftrightarrow\\
+(1-\alpha)^{s-r_0}-(1-\alpha)^s\geq \delta - \frac{W(\alpha)}{2N}\;\Leftrightarrow\\
+r_0 = s-\log_{1-\alpha}\left(  \delta - \frac{W(\alpha)}{2N}+(1-\alpha)^s\right)
+\end{align}
 The cost is then $C(r_0)$.
 \end{proof}
 
